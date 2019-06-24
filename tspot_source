@@ -1,0 +1,16 @@
+#C# tspot_source v0.9 (c)2005 duncan brown (http://duncanbrown.org)
+#C#
+#C# this script is used for troubleshooting bash scripts.  simply source it
+#C# (ex: source /usr/local/bin/tspot_source) and then call the function tspot
+#C# at key points and you will get a notification at what point the script is
+#C# by a count.  this is enabled when you set the variable $debug_tspot ,
+#C# otherwise it will remain silent.
+
+if [ -z "$tspot" ]; then
+ tspot=0
+fi
+
+tspot() {
+ tspot=$((tspot+=1))
+ [ "$debug_tspot" ] && echo "[!] reached trouble spot #${tspot}"
+}

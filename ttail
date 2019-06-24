@@ -1,0 +1,16 @@
+#!/bin/bash
+
+##############################################################################
+#C# ttail v0.9 (c) 2005 Duncan Brown (http://duncanbrown.org)
+#C#
+#C# this runs a tail -f against a log file and will prepend the date and time
+#C# to each line
+##############################################################################
+
+[ ! "$1" ] && echo "$0 [logfile]" && exit 255
+
+tail -f "${1}" | while read line
+do
+echo "$(date +"%F %R") : $line"
+done
+

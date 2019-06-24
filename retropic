@@ -1,0 +1,82 @@
+#!/bin/bash
+
+##############################################################################
+#V#
+#V# retropic v0.1 (c) 2014 duncan brown (http://duncanbrown.org)
+#V#
+##############################################################################
+###
+#A# retropic is simply a wrapper around imagemagick's convert utility that
+#A# will create something pretty close to an accurate retro image.
+#A#
+#C# ex: ./retropic [format] [original_file]
+#F#
+#F# gameboy     gameboy style!
+#F# snes        super nintendo!          (CPU intensive)
+#F# mac128k     the original macintosh
+#F# vga16       640x480 @ 16 colors
+#F# vga256      320x240 @ 16 colors
+#F# svga256     800x600 @ 256 colors
+#F#
+##############################################################################
+
+ps4_color="36"
+export PS4="\[\033[1;30m\]+\[\033[00m\]\[\033[${ps4_color}m\]+\[\033[00m\]\[\033[1;${ps4_color}m\]+\[\033[00m\] "
+
+format="$1"
+orig_file="$2"
+
+error_exit() {
+	exit
+}
+
+show_help() {
+	(egrep '^#[A-Z]#' | cut -d'#' -f3-) < $0
+}
+
+show_formats() {
+	(egrep '^#F#' | cut -d'#' -f3-) < $0
+}
+
+if [ ! -f "$orig_file" ]; then
+	show_help
+	error_exit
+fi
+
+if [ $format = gameboy ]; then
+	convert_args="-resize 160x144 -colorspace gray -colors 5 -scale 500%"
+elif [ $format = nes ]; then
+	# http://www.dev.bowdenweb.com/nes/nes-color-palette.html
+	exit
+elif [ $format = vga16 ]; then
+	convert_args="-resize 640x480 -colors 16 +dither -posterize 2"
+elif [ $format = vga256 ]; then
+	convert_args="-resize 320x240 -colors 256 -scale 200%"
+elif [ $format = svga256 ]; then
+	convert_args="-resize 800x600 -colors 256"
+elif [ $format = snes ]; then
+	# this double pass of the colors might be unnecessary, but the snes
+	# was limited to a total of 32,768 colors with a max of 256 on-screen
+	convert_args="-resize 256x239 -colors 32768 -colors 256 -scale 300%"
+elif [ $format = mac128k ]; then
+	convert_args="-resize 512x342 -colorspace gray -colors 2 -normalize -scale 200%"
+	convert_args="-resize 512x342 -monochrome -normalize -scale 200%"
+	convert_args="-colorspace gray -resize 512x342 -monochrome -dither FloydSteinberg -scale 200%"
+else
+	show_formats
+	error_exit
+fi
+
+
+
+if [[ $orig_file =~ .*\.jpg$ ]]; then
+	orig_ext="jpg"
+elif [[ $orig_file =~ .*\.gif$ ]]; then
+	orig_ext="gif"
+fi
+
+new_file="$(sed "s/\.$orig_ext$/_${format}.png/" <<< "$orig_file")"
+
+set -x
+convert $convert_args "$orig_file" "$new_file"
+#/usr/bin/display.im6 "$new_file"

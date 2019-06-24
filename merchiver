@@ -1,0 +1,30 @@
+#!/bin/bash
+
+##############################################################################
+# merchiver (c) 2014 duncan brown (http://duncanbrown.org)
+#
+# create a self-extracting package of a single file
+#
+# to create an archive, do the following.
+#
+# (cat merchiver ; tar cvj $yourDirOrFile) > self_extractor
+#
+##############################################################################
+
+output_file=whateveryouwant
+
+marker_start=$[ $(grep -an '^# script ends here$' $0 | cut -d':' -f1) + 1 ]
+
+for prog in bunzip2 tar ; do
+	echo -n "checking for $prog... "
+	which $prog || exit 1
+done
+
+echo 'unpacking archive...'
+
+tail -n +$marker_start $0 | bunzip2 -c | tar xv > $output_file
+
+echo 'all done!'
+
+exit 0
+# script ends here

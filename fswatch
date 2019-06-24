@@ -1,0 +1,154 @@
+#!/bin/bash
+
+##############################################################################
+#C#
+#C# fswatch 0.1 (c) 2014 duncan brown (http://duncanbrown.org)
+#C#
+#C# fswatch provides a look at average filesystem use growth/reduction over
+#C# several periods of time.  this is helpful when you're having multiple
+#C# processes or many small files transferred between filesystems to get a
+#C# handle of disk growth on the command line.
+#C#
+#C# usage:
+#C#
+#C#	fswatch [directory]
+#C#
+##############################################################################
+
+# how often we should sleep between iterations
+sleep_secs="30"
+
+# besides maximum amount of time, what minute intervals we check (count of 4)
+minutes="1 5 30 60"
+
+# the final column for counts
+maxMinutes="120"
+
+text_color=31
+
+# how often we should repeat the banner
+banner_repeat=20
+
+filesystem="$1"
+
+required_tools="bc"
+
+if ! (df --version 2>&1 | grep -wq 'GNU coreutils'); then
+	echo "GNU Coreutils df not found!"
+	exit 1
+elif [ ! "$filesystem" ]; then
+	grep '^#C#' $0 | cut -d'#' -f3-
+	exit 255
+fi
+
+for required_tool in $required_tools ; do
+	which $required_tool > /dev/null 2>&1 || missing_tools="$required_tool $missing_tools"
+done
+
+if [ "$missing_tools" ]; then
+	echo "missing tools: $missing_tools"
+	exit
+fi
+
+# how everything should be spaced out as we print
+fswatch_format='%-19s %9s %9s %9s %9s %9s %9s\n'
+
+
+fsColor() {
+	[ "$1" ] && text_color=$1
+
+	echo -n "[00;${text_color}m"
+
+	sed \
+		-e 's/\([[:punct:]]\)/[01m&[22m'/g \
+		-e 's/[A-Z]/[01m&[22m'/g
+
+	#-e 's/{:punct:}/[01m&[22m'/g \
+	echo -n '[00m'
+}
+
+# grab disk usage for the filesystem
+get_df() {
+	df -kP "$filesystem" | tail -1 | awk '{ print $3 }'
+}
+
+# see how much we've grown in what time
+disk_math() {
+	bc <<< "scale=3 ; ($1 - $2) / (1024 * $sleep_secs)"
+}
+
+set_window_title() {
+	if [[ $TERM =~ xterm.* ]]; then
+		echo -ne "\033]0;$@\007"
+	elif [[ $TERM =~ screen.* ]]; then
+		echo -ne "\033_$@\033\\"
+		printf '\033k%s\033\\' "fswatch"
+	fi
+}
+
+print_banner() {
+	printf "$fswatch_format" ------------------- --------- --------- --------- --------- --------- --------- | fsColor 30
+	printf "$fswatch_format" date ${sleep_secs}s $(sed "s/ /m /g" <<< "$minutes $maxMinutes ") | fsColor 35
+	printf "$fswatch_format" ------------------- --------- --------- --------- --------- --------- --------- | fsColor 30
+}
+
+change_over_time() {
+	# how far into the array we should reach to find previous disk usage
+	array_spot_needed=$[ (($1 * 60) / $sleep_secs) - 1 ]
+
+	# if we have the information, generate it
+	if [ "${disk_use_array[$array_spot_needed]}" ]; then
+		#array_spot_needed=$[ $array_spot_needed - 1 ]
+		past_disk_space=${disk_use_array[$array_spot_needed]}
+		disk_growth=$(disk_math $disk_one $past_disk_space)
+		disk_growth_average="$(bc <<< "scale=3 ; $disk_growth / ((60 / $sleep_secs) * $1)")"
+
+	else
+		disk_growth_average="-"
+	fi
+
+	if [ "$colorize_output" ] && (( $(bc -l <<< "$disk_growth_average > $disk_growth_yellow") )); then
+		echo -n # this would be the yellow ansi code
+	fi
+
+	echo "${disk_growth_average}"
+
+	if [ "$colorize_output" ] && (( $(bc -l <<< "$disk_growth_average > $disk_growth_yellow") )); then
+		echo -n # this would be the closeout ansi code
+	fi
+}
+
+line_count="$banner_repeat"
+
+set_window_title "fswatch :: $USER@$HOSTNAME:$filesystem"
+
+while true ; do
+	line_count=$[ $line_count + 1 ]
+
+	if [ "$line_count" -ge "$banner_repeat" ]; then
+		print_banner
+		line_count=0
+	fi
+
+	disk_one="$(get_df)"
+	sleep $sleep_secs
+	disk_two="$(get_df)"
+	disk_megs_growth="$(disk_math $disk_two $disk_one)"
+
+	fswatch_line="$(date +%Y/%m/%d_%H:%M:%S) ${disk_megs_growth}"
+
+	disk_use_array=($disk_one ${disk_use_array[@]})
+
+	for i in $minutes $maxMinutes; do
+		fswatch_line="$fswatch_line $(change_over_time $i)"
+	done
+
+	array_spot_max=$[ ($maxMinutes * 60) / $sleep_secs ]
+
+	if [ "$disk_use_array[$array_spot_max]" ]; then
+		unset disk_use_array[$array_spot_max]
+	fi
+
+	#echo "array elements: ${#disk_use_array[@]}/$array_spot_max " > /tmp/array_elements
+	printf "$fswatch_format" $fswatch_line | fsColor 37
+done

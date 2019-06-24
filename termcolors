@@ -1,0 +1,47 @@
+#!/bin/bash
+
+##############################################################################
+#C#
+#C# termcolors (c) 2015 duncan brown (http://duncanbrown.org)
+#C#
+#C# this script will show all of your available colors, up to 256
+#C#
+#C# this script is covered by the latest version of the gnu general public
+#C# license: http://www.gnu.org/copyleft/gpl.html
+#C#
+#C# if you're having trouble with screen & 256 colors with vim/etc, you need
+#C# to build a termcap for it.  you can do this for your account by copying
+#C# xterm-256color's termcap over & updating it for screen
+#C#
+#C# infocmp -C xterm-256color | sed 's/xterm/screen/g' > /tmp/screen-256color
+#C# tic /tmp/screen-256color
+#C#
+##############################################################################
+
+
+cat << EOMESSAGE
+
+##############################################################################
+if your terminal handles 256 colors, this should look nice
+
+the first 16 colors (0-15) are determined by your terminal's standard ansi
+color palette, the rest are all dictated by the standard 256 color palette.
+##############################################################################
+
+EOMESSAGE
+
+for bgcolor in {0..255} ; do
+	if [ "$bgcolor" -le "9" ]; then
+		padding="  "
+	elif [ "$bgcolor" -le "99" ]; then
+		padding=" "
+	fi
+	#echo -en "\e[30;48;5;${bgcolor}m  $padding$bgcolor  \e[0m"
+	#echo -en "$padding\e[$fgcolor;5m$bgcolor \e[30;48;5;${bgcolor}m    \e[0m\e[0m  "
+	printf "$padding\e[$fgcolor;3m$bgcolor \e[30;48;5;${bgcolor}m    \e[0m\e[0m  "
+	unset padding
+	# if our color + 1 is equally a factor of 8, a new line
+	[ $[ ($bgcolor + 1) % 6 ] == 0 ] && echo
+done
+
+echo

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+##############################################################################
+#V#
+#V# Curl UNTAR 1.0 (c) 2015 duncan brown (http://duncanbrown.org)
+#D#
+#D# cuntar takes an url and, based on its suffix, passes the output to
+#D# the appropriate decompression utility.  it works fairly well for most
+#D# archive types but i may have missed something.  email me at
+#D# duncan.duncanbrown@org... whoops, i may have swapped some punctuation!
+#H#
+#H# usage: cuntar [url]
+#H#        cuntar http://example.com/thattarball.tar.bz2
+#H#
+##############################################################################
+
+curl_args="-L -s"
+
+if [ ! "$1" ]; then
+	egrep '^#[VH]#' $0 | cut -d'#' -f3-
+	exit 1
+fi
+
+echo -n "       unpacking $1..."
+
+curl $curl_args $1 | \
+	if [[ "$1" =~ .*\.gz ]]; then
+		gunzip
+	elif [[ "$1" =~ .*\.bz2 ]]; then
+		bunzip2
+	elif [[ "$1" =~ .*\.xz ]]; then
+		unxz
+	elif [[ "$1" =~ .*\.lz ]]; then
+		lunzip
+	fi | tar x || exit 1
+
+echo " done."

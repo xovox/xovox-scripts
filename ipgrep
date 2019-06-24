@@ -1,0 +1,49 @@
+#!/bin/bash
+
+##############################################################################
+#C#
+#C# ipgrep 1.1 (c) 2013 duncan brown (http://duncanbrown.org)
+#C#
+#C# this script takes either a file or stdin and only returns IPs found
+#C#
+#C# options
+#C#
+#C#	--uniq	- will only show unique IPs found
+#C#	--count	- will show counts of individual IP instances
+#C#
+##############################################################################
+###
+#C# why ipgrep?
+#C#
+#C# i've found far too many disparate ways to find an IP in a file or input
+#C# with varying results.  so far, this has been the most solid for me.
+#C#
+#C# future plans?
+#C#
+#C# i'm hoping to eventually give it the ability to do ranges so we only
+#C# return IPs we'd care about.  ipv6 would also be interesting to tackle.
+#C#
+##############################################################################
+
+egrep_opts="-o"
+
+for arg in $@ ; do
+	if [ -f "$arg" ]; then
+		parse_file="$arg"
+	elif [ "$arg" = "--uniq" ]; then
+		uniq="true"
+	elif [ "$arg" = "--help" ]; then
+		grep '^#C#' $0 | cut -d'#' -f3-
+		exit
+	elif [ "$arg" = "--count" ]; then
+		uniq="true"
+		uniq_args="$uniq_args -c"
+	else
+		egrep_opts="$egrep_opts $arg"
+	fi
+	shift
+done
+
+egrep $egrep_opts '[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}' $parse_file | \
+	awk -F'.' 'NF==4 && $1>0 && $1<255 && $2<255 && $3<255 && $4<255 && !/\.\./' | \
+	([ "$uniq" = "true" ] && (sort | uniq $uniq_args) || cat)

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+##############################################################################
+#C# longtime v0.9 (c)2005 duncan brown (http://duncanbrown.org)
+#C#
+#C# a script that will convert unix time into a readable human format.
+#C# if called without any options, it will report current unix time.
+##############################################################################
+
+[ "$1" ] && date --date "$1 seconds 00:00:00 1970-01-01 UTC" || date +%s
