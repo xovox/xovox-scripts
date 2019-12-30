@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# https://gist.github.com/iamtekeste/3cdfd0366ebfd2c0d805/f4f0900a4936144a1843c50ce0fdeed2c540631e#gistcomment-2316906
+
+cookies_file=/tmp/gdrivedl.$$
+
+CONFIRM=$(wget --quiet --save-cookies $cookies_file --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=$1" -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
+wget --load-cookies $cookies_file "https://docs.google.com/uc?export=download&confirm=$CONFIRM&id=$1" -O $2
+rm -rf $cookies_file
