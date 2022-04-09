@@ -29,7 +29,7 @@ text_color=31
 # how often we should repeat the banner
 banner_repeat=20
 
-filesystem="$1"
+filesystem="$(stat "$1" --printf=%m)"
 
 required_tools="bc"
 
