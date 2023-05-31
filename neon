@@ -1,0 +1,29 @@
+#!/bin/bash
+
+tmp=/dev/shm
+background=$tmp/neon_transparent.png
+if [ ! -f "$background" ]; then
+	convert -size 1000x1000 xc:transparent "$background"
+fi
+
+neonimage() {
+	imagename="$(basename "$image")"
+	echo "- $imagename"
+	white_image="$tmp/white-$imagename"
+	final_image="$tmp/final-$imagename"
+	tmp_image="$tmp/$imagename"
+	composite -gravity center "$image" "$background" "$tmp_image"
+	convert "$tmp_image" -fill "white" -colorize 100 -blur 0x8 "$white_image"
+	composite -gravity center "$tmp_image" -gravity center "$white_image" "$final_image"
+	convert -trim +repage "$final_image" "$image"
+	rm -f "$final_image" "$white_image" "$tmp_image"
+}
+
+for image in *png ; do
+	while [ "$(jobs | wc -l)" -ge 4 ]; do
+		sleep .05
+	done
+	neonimage &
+done
+
+wait
